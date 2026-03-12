@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XRPMan TRUSTLINE Scraper</title>
+    <title>XRPMan Asset Scraper</title>
     <script src="https://unpkg.com/xrpl@2.3.0/build/xrpl-latest-min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -18,14 +18,13 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #000; }
         ::-webkit-scrollbar-thumb { background: #00ff00; }
-        .fade-in { animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
         input, select { background-color: #000 !important; color: #00ff00 !important; border-color: #00ff00 !important; }
         input::placeholder { color: rgba(0, 255, 0, 0.5); }
         button#startBtn { background-color: #00ff00 !important; color: #000 !important; }
         button#startBtn:hover { background-color: #33ff33 !important; box-shadow: 0 0 15px #00ff00; }
         .text-glow { text-shadow: 0 0 8px rgba(0, 255, 0, 0.6); }
+        .icon-pulse { border: 1px solid #00ff00; box-shadow: 0 0 10px rgba(0,255,0,0.3); }
     </style>
 </head>
 <body class="p-4 md:p-8 flex items-center justify-center min-h-screen">
@@ -33,13 +32,18 @@
         <div class="scanline"></div>
         
         <header class="border-b border-[#00ff00] pb-4 mb-6 flex justify-between items-end">
-            <div>
-                <h1 class="text-3xl md:text-4xl font-black tracking-tighter text-[#00ff00] uppercase text-glow">XRPMan Value Scraper</h1>
-                <p class="text-[10px] text-[#00ff00] mt-1 opacity-70 uppercase">DEX Price Engine Enabled | Color: #00ff00</p>
+            <div class="flex items-center gap-4">
+                <div id="tokenIconContainer" class="hidden">
+                    <img id="tokenIcon" src="" class="w-12 h-12 rounded-full icon-pulse bg-zinc-900" onerror="this.src='https://via.placeholder.com/48?text=?';">
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-black tracking-tighter text-[#00ff00] uppercase text-glow">XRPMan Asset Scraper</h1>
+                    <p class="text-[10px] text-[#00ff00] mt-1 opacity-70 uppercase">L2 Hex Translation | Asset Metadata v2.6</p>
+                </div>
             </div>
             <div class="text-right">
-                <div id="xrpPriceDisplay" class="text-xs font-bold">XRP: $0.00</div>
-                <button onclick="location.reload()" class="text-[10px] border border-red-600 text-red-600 px-2 py-1 hover:bg-red-600 hover:text-black transition-all uppercase font-bold">Reset</button>
+                <div id="xrpPriceDisplay" class="text-xs font-bold text-glow">XRP: $0.00</div>
+                <button onclick="location.reload()" class="text-[10px] border border-red-600 text-red-600 px-2 py-1 hover:bg-red-600 hover:text-black transition-all uppercase font-bold mt-1">Reset</button>
             </div>
         </header>
 
@@ -49,53 +53,44 @@
                     <label class="block text-[10px] uppercase font-bold text-[#00ff00] mb-1">Issuer Address</label>
                     <div class="flex gap-2">
                         <input id="issuer" type="text" placeholder="r-Address..." class="flex-1 border p-2 text-sm outline-none font-bold">
-                        <button id="loadIssuerBtn" onclick="loadIssuerCurrencies()" class="border border-[#00ff00] text-[#00ff00] px-4 font-bold hover:bg-[#00ff00] hover:text-black transition-colors text-xs uppercase">Load</button>
+                        <button id="loadIssuerBtn" onclick="loadIssuerCurrencies()" class="border border-[#00ff00] text-[#00ff00] px-4 font-bold hover:bg-[#00ff00] hover:text-black transition-colors text-xs uppercase">Load Tokens</button>
                     </div>
                 </div>
 
-                <div id="filterBlock" class="hidden fade-in border border-[#00ff00] p-4 bg-zinc-900/20 space-y-4">
+                <div id="filterBlock" class="hidden border border-[#00ff00] p-4 bg-zinc-900/20 space-y-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-[10px] uppercase font-bold text-[#00ff00] mb-1">Select Token</label>
                             <select id="currencySelect" class="w-full border p-2 outline-none font-bold text-sm"></select>
                         </div>
                         <div>
-                            <label class="block text-[10px] uppercase font-bold text-[#00ff00] mb-1">Current Token Price</label>
+                            <label class="block text-[10px] uppercase font-bold text-[#00ff00] mb-1">DEX Market Data</label>
                             <div id="tokenPriceDisplay" class="p-2 border border-[#00ff00]/30 text-sm font-mono italic">Awaiting selection...</div>
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-3 gap-2">
-                        <div>
-                            <label class="block text-[10px] uppercase font-bold text-[#00ff00] mb-1">Min Balance</label>
-                            <input id="minBalance" type="number" placeholder="0" class="w-full border p-2 text-xs outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] uppercase font-bold text-[#00ff00] mb-1">Min % Supply</label>
-                            <input id="minPercent" type="number" step="0.01" placeholder="0" class="w-full border p-2 text-xs outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] uppercase font-bold text-[#00ff00] mb-1">Min XRP Value</label>
-                            <input id="minXRP" type="number" placeholder="0" class="w-full border p-2 text-xs outline-none">
-                        </div>
+                        <input id="minBalance" type="number" placeholder="Min Bal" class="w-full border p-2 text-xs outline-none">
+                        <input id="minPercent" type="number" step="0.01" placeholder="Min %" class="w-full border p-2 text-xs outline-none">
+                        <input id="minXRP" type="number" placeholder="Min XRP" class="w-full border p-2 text-xs outline-none">
                     </div>
                 </div>
 
                 <button id="startBtn" onclick="startExtraction()" disabled class="w-full font-black py-4 transition-all uppercase tracking-widest disabled:opacity-30">
-                    Scan Wallet Values
+                    Scan Asset Value
                 </button>
             </div>
 
             <div class="border border-[#00ff00] p-4 flex flex-col justify-center items-center text-center relative overflow-hidden bg-[#00ff00]/5">
-                <div id="statusIndicator" class="w-2 h-2 rounded-full bg-zinc-800 absolute top-2 right-2"></div>
-                <div id="statusText" class="text-xs mb-2 font-bold text-[#00ff00] uppercase">Awaiting Target...</div>
+                <div id="statusIndicator" class="w-2 h-2 rounded-full bg-zinc-800 absolute top-2 right-2 transition-colors"></div>
+                <div id="statusText" class="text-xs mb-2 font-bold text-[#00ff00] uppercase">System Ready</div>
                 <div id="progressCount" class="text-6xl font-black text-[#00ff00] text-glow my-2">0</div>
-                <div class="text-[10px] text-[#00ff00] uppercase tracking-widest border-t border-[#00ff00] pt-2 w-3/4 mx-auto opacity-70">Filtered Wallets</div>
+                <div class="text-[10px] text-[#00ff00] uppercase tracking-widest border-t border-[#00ff00] pt-2 w-3/4 mx-auto opacity-70">Identified Holders</div>
             </div>
         </div>
 
         <div id="log" class="bg-black border border-[#00ff00] h-32 overflow-y-auto p-3 text-[10px] text-[#00ff00] mb-6 font-mono opacity-80 italic">
-            [SYS] Value Engine Initialized.
+            [SYS] Value Engine Standby.
         </div>
 
         <div class="flex gap-4">
@@ -117,9 +112,28 @@
                 const data = await res.json();
                 globalXRPPriceUSD = data.ripple.usd;
                 document.getElementById('xrpPriceDisplay').innerText = `XRP: $${globalXRPPriceUSD.toFixed(3)}`;
-            } catch(e) { logger("Price API Error", "error"); }
+            } catch(e) { logger("Price Sync Failed", "error"); }
         }
         fetchXRPPrice();
+
+        function hexToAscii(hex) {
+            if (!hex || hex.length < 3) return hex;
+            if (hex.length === 3) return hex;
+            let str = '';
+            for (let i = 0; i < hex.length; i += 2) {
+                let code = parseInt(hex.substr(i, 2), 16);
+                if (code !== 0) str += String.fromCharCode(code);
+            }
+            return str.replace(/[^\x20-\x7E]/g, '') || hex;
+        }
+
+        async function fetchTokenIcon(issuer, currency) {
+            const iconImg = document.getElementById('tokenIcon');
+            const container = document.getElementById('tokenIconContainer');
+            const iconUrl = `https://api.xrp.cafe/v1/token/icon/${issuer}/${currency}`;
+            iconImg.src = iconUrl;
+            container.classList.remove('hidden');
+        }
 
         document.getElementById('currencySelect').addEventListener('change', async function() {
             if(!this.value) return;
@@ -127,13 +141,14 @@
             currentTotalSupply = parseFloat(selected.getAttribute('data-supply')) || 0;
             const issuer = document.getElementById('issuer').value.trim();
             
-            document.getElementById('tokenPriceDisplay').innerText = "Querying DEX...";
+            fetchTokenIcon(issuer, this.value);
+            
+            document.getElementById('tokenPriceDisplay').innerText = "Syncing DEX...";
             currentTokenPriceInXRP = await getDEXPrice(issuer, this.value);
             
             const usdVal = (currentTokenPriceInXRP * globalXRPPriceUSD).toFixed(6);
             document.getElementById('tokenPriceDisplay').innerHTML = `${currentTokenPriceInXRP.toFixed(6)} XRP <span class="opacity-50 text-[10px]">($${usdVal})</span>`;
             document.getElementById('startBtn').disabled = false;
-            logger(`Price Engine synced: 1 Token = ${currentTokenPriceInXRP.toFixed(6)} XRP`);
         });
 
         async function getDEXPrice(issuer, currency) {
@@ -153,11 +168,8 @@
                 const offers = data.result.offers;
                 if(!offers || offers.length === 0) return 0;
                 
-                // Price = TakerPays (Token) / TakerGets (XRP) ?? 
-                // We want: 1 Token = X XRP.
-                // An offer to SELL tokens for XRP: taker_gets is Token, taker_pays is XRP.
                 const offer = offers[0];
-                const xrpAmount = parseFloat(offer.TakerGets) / 1000000; // drops to XRP
+                const xrpAmount = parseFloat(offer.TakerGets) / 1000000;
                 const tokenAmount = parseFloat(offer.TakerPays.value);
                 return xrpAmount / tokenAmount;
             } catch(e) { return 0; }
@@ -174,7 +186,7 @@
         async function loadIssuerCurrencies() {
             const issuer = document.getElementById('issuer').value.trim();
             if (!issuer) return;
-            logger(`Scanning Gateway: ${issuer}...`);
+            logger(`Decoding L2 Data for: ${issuer}...`);
             try {
                 const response = await fetch("https://xrplcluster.com", {
                     method: 'POST',
@@ -188,11 +200,12 @@
                     const opt = document.createElement('option');
                     opt.value = curr;
                     opt.setAttribute('data-supply', obligations[curr]);
-                    opt.text = `${curr.length > 3 ? 'HEX' : curr} (${parseFloat(obligations[curr]).toLocaleString()})`;
+                    const readableName = hexToAscii(curr);
+                    opt.text = `${readableName} (${parseFloat(obligations[curr]).toLocaleString()})`;
                     selectEl.appendChild(opt);
                 });
                 document.getElementById('filterBlock').classList.remove('hidden');
-            } catch (e) { logger("Issuer scanning failed", "error"); }
+            } catch (e) { logger("Hex Translation Failed", "error"); }
         }
 
         async function startExtraction() {
@@ -204,7 +217,7 @@
             
             allHolders = [];
             document.getElementById('startBtn').disabled = true;
-            document.getElementById('statusText').innerText = "Extracting...";
+            document.getElementById('statusText').innerText = "Scanning...";
             document.getElementById('statusIndicator').style.backgroundColor = "#00ff00";
 
             try {
@@ -233,11 +246,11 @@
                     marker = result.marker;
                     hasMore = !!marker;
                 }
-                document.getElementById('statusText').innerText = "Analysis Complete";
+                document.getElementById('statusText').innerText = "Complete";
                 document.getElementById('downloadBtn').disabled = false;
                 document.getElementById('copyBtn').disabled = false;
-                logger(`Found ${allHolders.length} wallets meeting value criteria.`);
-            } catch (e) { logger("Extraction Failed", "error"); }
+                logger(`Found ${allHolders.length} value-compliant wallets.`);
+            } catch (e) { logger("Scan Failed", "error"); }
             document.getElementById('startBtn').disabled = false;
         }
 
@@ -251,23 +264,46 @@
         }
 
         function downloadCSV() {
-            const blob = new Blob([generateCSV()], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `XRPMan_Value_Extract.csv`;
-            a.click();
-            logger("CSV Exported.");
+            try {
+                const csvData = generateCSV();
+                const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                
+                const curName = hexToAscii(document.getElementById('currencySelect').value);
+                const fileName = `XRPMan_${curName}_Holders.csv`;
+                
+                link.setAttribute("href", url);
+                link.setAttribute("download", fileName);
+                link.style.visibility = 'hidden';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                window.URL.revokeObjectURL(url);
+                logger("Download Triggered: " + fileName);
+            } catch (err) {
+                logger("Download Logic Error", "error");
+            }
         }
 
         function copyToClipboard() {
-            const el = document.createElement('textarea');
-            el.value = generateCSV();
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            logger("Data copied.");
+            try {
+                const csv = generateCSV();
+                const el = document.createElement('textarea');
+                el.value = csv;
+                el.setAttribute('readonly', '');
+                el.style.position = 'absolute';
+                el.style.left = '-9999px';
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                logger("CSV Data Copied to Clipboard.");
+            } catch (err) {
+                logger("Clipboard Access Denied", "error");
+            }
         }
     </script>
 </body>
